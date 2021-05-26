@@ -1,0 +1,13 @@
+root 登入 ssh
+首先要重新設定 Ubuntu 的 root 密碼, 輸入以下指令:
+$ sudo passwd root
+修改了 root 密碼後, 開啟 sshd 的設定檔:
+
+$ sudo vi /etc/ssh/sshd_config
+找到以下一行:
+PermitRootLogin prohibit-password
+改為:
+PermitRootLogin yes
+儲存檔案及離開編輯器, 重新啟動 sshd:
+$ sudo systemctl restart sshd
+重新啟動 sshd 後, 便可以用 root 帳號發入 ssh.
