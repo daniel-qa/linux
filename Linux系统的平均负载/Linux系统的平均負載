@@ -1,0 +1,126 @@
+关于Linux系统的平均负载最全面介绍
+一、什么是系统平均负载(Load average)？
+在Linux系统中，uptime、w、top等命令都会有系统平均负载load average的输出，那么什么是系统平均负载呢？
+系统平均负载被定义为在特定时间间隔内运行队列中的平均进程数。如果一个进程满足以下条件则其就会位于运行队列中：
+- 它没有在等待I/O操作的结果
+- 它没有主动进入等待状态(也就是没有调用'wait')
+- 没有被停止(例如：等待终止)
+例如：
+[root@opendigest root]# uptime
+7:51pm up 2 days, 5:43, 2 users, load average: 8.13, 5.90, 4.94
+命令输出的最后内容表示在过去的1、5、15分钟内运行队列中的平均进程数量。
+一般来说只要每个CPU的当前活动进程数不大于3那么系统的性能就是良好的，如果每个CPU的任务数大于5，那么就表示这台机器的性能有严重问题。对于上面的例子来说，假设系统有两个CPU，那么其每个CPU的当前任务数为：8.13/2=4.065。这表示该系统的性能是可以接受的。
+
+二、Load average的算法
+上面的输出数据是每隔5秒钟检查一次活跃的进程数，然后根据这个数值算出来的。如果这个数除以CPU的数目，结果高于5的时候就表明系统在超负荷运转了。其算法(摘自Linux 2.4的内核代码)如下：
+
+文件: include/linux/sched.h:
+#define FSHIFT 11 /* nr of bits of precision */
+#define FIXED_1 (1LOAD_FREQ (5*HZ) /* 5 sec intervals */
+#define EXP_1 1884 /* 1/exp(5sec/1min) as fixed-point, 2048/pow(exp(1), 5.0/60) */
+#define EXP_5 2014 /* 1/exp(5sec/5min), 2048/pow(exp(1), 5.0/300) */
+#define EXP_15 2037 /* 1/exp(5sec/15min), 2048/pow(exp(1), 5.0/900) */
+
+#define CALC_LOAD(load,exp,n) \
+load *= exp; \
+load += n*(FIXED_1-exp); \
+load >>= FSHIFT;
+
+/**********************************************************/
+
+文件: kernel/timer.c:
+unsigned long avenrun[3];
+
+static inline void calc_load(unsigned long ticks)
+{
+unsigned long active_tasks; /* fixed-point */
+static int count = LOAD_FREQ;
+
+count -= ticks;
+if (count count += LOAD_FREQ;
+active_tasks = count_active_tasks();
+CALC_LOAD(avenrun[0], EXP_1, active_tasks);
+CALC_LOAD(avenrun[1], EXP_5, active_tasks);
+CALC_LOAD(avenrun[2], EXP_15, active_tasks);
+}
+}
+
+/**********************************************************/
+
+文件: fs/proc/proc_misc.c:
+
+#define LOAD_INT(x) ((x) >> FSHIFT)
+#define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
+
+static int loadavg_read_proc(char *page, char **start, off_t off,
+int count, int *eof, void *data)
+{
+int a, b, c;
+int len;
+
+a = avenrun[0] + (FIXED_1/200);
+b = avenrun[1] + (FIXED_1/200);
+c = avenrun[2] + (FIXED_1/200);
+len = sprintf(page,"%d.%02d %d.%02d %d.%02d %ld/%d %d\n",
+LOAD_INT(a), LOAD_FRAC(a),
+LOAD_INT(b), LOAD_FRAC(b),
+LOAD_INT(c), LOAD_FRAC(c),
+nr_running(), nr_threads, last_pid);
+return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+三、/proc/loadavg 各项数据的含义
+/proc文件系统是一个虚拟的文件系统，不占用磁盘空间，它反映了当前操作系统在内存中的运行情况，查看/proc下的文件可以聊寄到系统的运行状态。查看系统平均负载使用“cat /proc/loadavg”命令，输出结果如下：
+0.27 0.36 0.37 4/83 4828/
+前三个数字大家都知道，是1、5、15分钟内的平均进程数（有人认为是系统负荷的百分比，其实不然，有些时候可以看到200甚至更多）。后面两个呢，一个的分子是正在运行的进程数，分母是进程总数；另一个是最近运行的进程ID号。
+
+四、查看系统平均负载的常用命令
+1、cat /proc/loadavg
+
+2、uptime
+名称： uptime
+使用权限： 所有使用者
+使用方式： uptime [-V]
+说明： uptime 提供使用者下面的资讯，不需其他参数：
+现在的时间 系统开机运转到现在经过的时间 连线的使用者数量 最近一分钟，五分钟和十五分钟的系统负载
+参数： -V 显示版本资讯。
+范例： uptime
+其结果为：
+10:41am up 5 days, 10 min, 1 users, load average: 0.00, 0.00, 1.99
+
+
+3、w
+
+功能说明：显示目前登入系统的用户信息。
+语　　法：w [-fhlsuV][用户名称]
+补充说明：执行这项指令可得知目前登入系统的用户有那些人，以及他们正在执行的程序。单独执行w
+指令会显示所有的用户，您也可指定用户名称，仅显示某位用户的相关信息。
+参　　数：
+-f 　开启或关闭显示用户从何处登入系统。
+-h 　不显示各栏位的标题信息列。
+-l 　使用详细格式列表，此为预设值。
+-s 　使用简洁格式列表，不显示用户登入时间，终端机阶段作业和程序所耗费的CPU时间。
+-u 　忽略执行程序的名称，以及该程序耗费CPU时间的信息。
+-V 　显示版本信息。
+4、top
+功能说明：显示，管理执行中的程序。
+语　　法：top [bciqsS][d ][n ]
+补充说明：执行top指令可显示目前正在系统中执行的程序，并通过它所提供的互动式界面，用热键加以管理。
+参　　数：
+b 　使用批处理模式。
+c 　列出程序时，显示每个程序的完整指令，包括指令名称，路径和参数等相关信息。
+d 　设置top监控程序执行状况的间隔时间，单位以秒计算。
+i 　执行top指令时，忽略闲置或是已成为Zombie的程序。
+n 　设置监控信息的更新次数。
+q 　持续监控程序执行的状况。
+s 　使用保密模式，消除互动模式下的潜在危机。
+S 　使用累计模式，其效果类似ps指令的"-S"参数。
+
+5、tload
+功能说明：显示系统负载状况。
+语　　法：tload [-V][-d ][-s ][终端机编号]
+补充说明：tload指令使用ASCII字符简单地以文字模式显示系统负载状态。假设不给予终端机编号，则会在执行tload指令的终端机显示负载情形。
+参　　数：
+-d 　设置tload检测系统负载的间隔时间，单位以秒计算。
+-s 　设置图表的垂直刻度大小，单位以列计算。
+-V 　显示版本信息。
