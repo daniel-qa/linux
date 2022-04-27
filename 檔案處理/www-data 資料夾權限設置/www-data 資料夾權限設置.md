@@ -10,3 +10,9 @@ usermod -a -G www-data (your username)
 chgrp www-data /home/myuser/folderA
 chmod g+rwxs /home/myuser/folderA
 ```
+
+## Docker 環境下的權限問題
+* 文件被創建時，cli 模式和 php-fpm 模式運行的用戶不一致
+* cli 模式下創建的文件用戶權限為 root , 
+* php-fpm 模式創建的文件用戶權限為 1000
+* 
