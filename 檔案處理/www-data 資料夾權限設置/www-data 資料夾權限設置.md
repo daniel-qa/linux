@@ -4,7 +4,8 @@
 ```
 usermod -a -G www-data (your username)
 ```
-然後：
+然後，將資料夾群組設定為 www-data
+提供讀，寫，enter-directory權限，s標誌將確保在該目錄中創建的任何文件都將提供給 www-data
 ```
 chgrp www-data /home/myuser/folderA
 chmod g+rwxs /home/myuser/folderA
