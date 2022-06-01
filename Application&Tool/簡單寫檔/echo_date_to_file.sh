@@ -1,5 +1,5 @@
 #!/bin/bash
-MMDDhhmm
+
 today=`date +%Y_%m_%d　%H:%M:%S`
 echo $today
 # 2009_07_21
