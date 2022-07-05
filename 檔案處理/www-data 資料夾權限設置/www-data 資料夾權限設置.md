@@ -35,3 +35,17 @@ chmod g+rwxs /home/myuser/folderA
  docker-compose
  ```
  ```
+ 
+* /etc/passwd
+
+中間的 ,,, ，是 user info
+
+ ```
+www-data:x:33   :33      :www-data      :/var/www           :/usr/sbin/nologin
+test:    x:1000 :1000    :,,,  :/opt/volumes   :/bin/bash
+
+
+cn_kubectl :x :1011 :1012 :,,, :/home/cn_kubectl:/bin/bash
+
+ ```
+ 
