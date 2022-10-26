@@ -5,8 +5,9 @@ then
     echo "var is 123"
 fi
  
+var1="123"
  
-if [ "$1" = "123" ]
+if [ "$var1" = "123" ]
 then
     echo "var is 123"
 fi
