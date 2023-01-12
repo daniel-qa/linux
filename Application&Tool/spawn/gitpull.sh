@@ -1,7 +1,7 @@
 !/usr/bin/expect
 
 set timeout 30
-cd /home/rd/test/sokradeo
+cd /home/rd/myproject
 
 spawn git pull
 expect "Username for 'http://192.168.1.2':"
